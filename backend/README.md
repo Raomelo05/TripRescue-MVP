@@ -1,19 +1,31 @@
-# Backend: persistência
+# Backend: API, autenticacao e persistencia
 
-Os modelos SQLAlchemy ficam em `app/db/models.py`; `app/db/session.py` configura o engine e a sessão. O padrão local é SQLite e a API publicada deve usar PostgreSQL por `DATABASE_URL` (`postgresql+psycopg://...`). A configuração carrega o `.env` da raiz do repositório, sem sobrescrever variáveis já exportadas.
+A API usa FastAPI e SQLAlchemy. SQLite e o padrao local; PostgreSQL usa `DATABASE_URL` (`postgresql+psycopg://...`). A configuracao carrega o `.env` na raiz do repositorio sem substituir variaveis exportadas. Configure `SECRET_KEY` no ambiente com um valor aleatorio forte; nao ha segredo padrao e nenhum segredo real deve ser versionado. JWTs HS256 expiram em 30 minutos.
 
-Execute na pasta `backend/`:
+## Executar
+
+Na pasta `backend/`:
 
 ```bash
 python -m pip install -e ".[dev]"
 python -m alembic upgrade head
-python -m pytest
+python -m uvicorn app.main:app --reload
 ```
 
-Depois de alterar os modelos, gere e revise a migração:
+Para validar a API e o schema local:
 
 ```bash
-python -m alembic revision --autogenerate -m "descricao da alteracao"
+python -m pytest
+python -m alembic upgrade head
 ```
 
-O schema inicial cobre contas, viagens, trechos, compromissos, incidentes, planos/tarefas e registros textuais de nota, protocolo e histórico. Todo registro privado deve ser consultado no escopo do usuário autenticado; as chaves estrangeiras compostas também bloqueiam vínculos acidentais entre usuários no banco. `password_hash` guarda somente o hash, nunca a senha original. Em produção, use migrações; não use `create_all()`.
+## Contratos
+
+- `POST /auth/register` e `POST /auth/login` recebem `{ "email": "...", "password": "..." }` e retornam `{ "access_token": "...", "token_type": "bearer", "user": { "id": "...", "email": "..." } }`.
+- E-mails sao removidos de espacos laterais e convertidos para minusculas. Senhas sao armazenadas com Argon2id. Cadastro duplicado retorna `409`; login invalido retorna a mesma resposta `401` sem revelar se a conta existe.
+- Envie JWTs em `Authorization: Bearer <token>`. O segredo vem de `SECRET_KEY`.
+- `GET /trips` lista viagens do usuario autenticado; `POST /trips` cria uma viagem e recebe `{ "title": "...", "destination": "...", "starts_on": "YYYY-MM-DD", "ends_on": "YYYY-MM-DD" }`.
+- `GET /trips/{id}`, `PATCH /trips/{id}` e `DELETE /trips/{id}` operam somente nas viagens do usuario autenticado. Viagem inexistente ou de outro usuario retorna `404`. PATCH aceita qualquer subconjunto nao vazio dos campos da viagem.
+- Datas invalidas ou `ends_on` anterior a `starts_on` retornam `422`.
+
+Os modelos SQLAlchemy ficam em `app/db/models.py`; as migracoes existentes ja incluem usuarios e viagens. Use Alembic para futuras alteracoes de schema e nao use `create_all()` em producao. Dados privados devem sempre ser consultados no escopo do usuario autenticado.
