@@ -41,7 +41,10 @@ API (requer Python e as dependências de `backend/pyproject.toml`):
 ```bash
 cd backend
 python -m pip install -e .
+python -m alembic upgrade head
 python -m uvicorn app.main:app --reload
 ```
 
 Configure `EXPO_PUBLIC_API_URL` no frontend e `DATABASE_URL` no backend quando forem integrados. Use `.env.example` como referência; nunca salve credenciais reais no Git.
+
+O banco local usa SQLite por padrão. Para preparar os testes do backend, instale `python -m pip install -e ".[dev]"` e execute `python -m pytest` dentro de `backend/`. Alterações de schema devem ser versionadas em migrações Alembic; veja [backend/README.md](backend/README.md).

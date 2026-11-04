@@ -13,6 +13,7 @@
 - Persistência: SQLite no desenvolvimento local e PostgreSQL no ambiente publicado; a camada de acesso deve permitir ambos.
 - Autenticação: cadastro e login por senha na API. Senhas devem ser armazenadas apenas com hash apropriado; tokens devem ser validados em todo endpoint privado.
 - Isolamento: cada consulta ou alteração de dado privado deve ser escopada ao usuário autenticado desde o primeiro endpoint.
+- Schema inicial: contas, viagens, trechos, compromissos, incidentes, planos de ação, tarefas e registros de nota/protocolo/histórico. Chaves estrangeiras compostas impedem vínculos entre usuários no banco; modelos e migrações ficam em `backend/app/db/` e `backend/migrations/`.
 
 ## Pendentes antes de publicar
 
