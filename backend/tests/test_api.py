@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
 from app.db.models import User
@@ -13,7 +14,11 @@ from app.main import app
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setenv("SECRET_KEY", "test-only-secret-key-that-is-not-for-production")
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 
     @event.listens_for(engine, "connect")
     def enable_foreign_keys(connection, _record):
@@ -57,7 +62,7 @@ def test_register_normalizes_email_and_login_returns_same_contract(client):
     login = client.post("/auth/login", json={"email": "PERSON@example.com", "password": "long-enough-pass"})
     assert login.status_code == 200
     assert login.json()["user"] == body["user"]
-    assert login.json()["access_token"] != body["access_token"]
+    assert client.get("/trips", headers=auth(login.json()["access_token"])).status_code == 200
 
     with Session(client.app.state.test_engine) as db:
         user = db.query(User).one()
