@@ -1,7 +1,9 @@
+import os
 from uuid import UUID
 
 import jwt
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -14,7 +16,22 @@ from app.schemas import AuthResponse, Credentials, TripInput, TripPatch, TripRes
 from app.security import create_access_token, decode_access_token, get_secret, password_hash
 
 
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:8081").split(",")
+    if origin.strip()
+]
+if not cors_origins or "*" in cors_origins:
+    raise RuntimeError("CORS_ORIGINS must contain explicit origins")
+
 app = FastAPI(title="TripRescue API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 bearer = HTTPBearer(auto_error=False)
 
 

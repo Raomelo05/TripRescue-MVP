@@ -96,3 +96,19 @@ def test_trip_validation_and_user_isolation_for_all_operations(client):
 def test_private_routes_require_valid_token(client):
     assert client.get("/trips").status_code == 401
     assert client.get("/trips", headers=auth("not-a-jwt")).status_code == 401
+
+
+def test_cors_allows_local_frontend_only(client):
+    allowed = client.options(
+        "/trips",
+        headers={
+            "Origin": "http://localhost:8081",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "authorization",
+        },
+    )
+    assert allowed.status_code == 200
+    assert allowed.headers["access-control-allow-origin"] == "http://localhost:8081"
+
+    rejected = client.get("/trips", headers={"Origin": "https://untrusted.example"})
+    assert "access-control-allow-origin" not in rejected.headers
